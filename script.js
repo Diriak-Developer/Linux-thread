@@ -531,6 +531,7 @@ function setCurrentInput(text) {
   state.currentInput = text;
   dom.hiddenInput.value = text;
   refreshCurrentInputDisplay();
+  pinCaretToEnd();
 }
 
 function refreshCurrentInputDisplay() {
@@ -542,8 +543,27 @@ function refreshPromptDisplay() {
   dom.promptLabel.innerHTML = buildPromptHTML();
 }
 
+// Fuerza el cursor del input oculto al final del texto.
+// Algunos teclados virtuales de Android (Gboard, Samsung Keyboard) pierden
+// la referencia del cursor en inputs invisibles/diminutos y lo reinician
+// a la posición 0 después de cada tecla; eso hace que el texto se escriba
+// "al revés" y que Backspace borre el primer carácter en vez del último.
+// Fijar la selección al final tras cada evento evita ese comportamiento.
+function pinCaretToEnd() {
+  const len = dom.hiddenInput.value.length;
+  try {
+    dom.hiddenInput.setSelectionRange(len, len);
+  } catch (err) {
+    // Algunos navegadores móviles no permiten setSelectionRange en ciertos
+    // estados del input; si falla, simplemente lo ignoramos.
+  }
+}
+
 function focusInput() {
   dom.hiddenInput.focus({ preventScroll: true });
+  // En móvil, el foco inicial también puede dejar el cursor en la posición 0.
+  pinCaretToEnd();
+  requestAnimationFrame(pinCaretToEnd);
 }
 
 // Envía el comando actual: lo imprime como eco, lo ejecuta, y
@@ -574,6 +594,11 @@ async function submitCurrentCommand() {
 dom.hiddenInput.addEventListener("input", () => {
   state.currentInput = dom.hiddenInput.value;
   refreshCurrentInputDisplay();
+  pinCaretToEnd();
+  // Doble aseguramiento: algunos teclados Android reubican el cursor
+  // justo después de que termina el evento "input", así que lo volvemos
+  // a fijar en el siguiente frame.
+  requestAnimationFrame(pinCaretToEnd);
 });
 
 dom.hiddenInput.addEventListener("keydown", async (event) => {
