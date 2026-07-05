@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>incognito@piratas: ~</title>
+  <meta name="description" content="Simulador de terminal Linux interactiva construida con HTML, CSS y JavaScript Vanilla.">
+
+  <!-- Hoja de estilos principal -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Favicon minimalista en forma de cursor de terminal (data URI, sin dependencias externas) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><rect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%230b0e13%22/><text x=%222%22 y=%2212%22 font-size=%2210%22 fill=%22%2350fa7b%22>&gt;_</text></svg>">
+</head>
+<body>
+
+  <!-- ============================================================
+       FONDO AMBIENTAL
+       Capa decorativa detrás de la ventana de terminal para dar
+       profundidad (viñeta + textura sutil de scanlines).
+  ============================================================= -->
+  <div class="ambient-backdrop" aria-hidden="true"></div>
+
+  <!-- ============================================================
+       CONTENEDOR PRINCIPAL DE LA VENTANA DE TERMINAL
+  ============================================================= -->
+  <main class="terminal-window" id="terminal-window" role="application" aria-label="Terminal interactiva">
+
+    <!-- ---------- BARRA SUPERIOR DE LA VENTANA ---------- -->
+    <header class="title-bar">
+      <div class="title-bar__buttons" aria-hidden="true">
+        <span class="btn btn--close"   title="Cerrar"></span>
+        <span class="btn btn--minimize" title="Minimizar"></span>
+        <span class="btn btn--maximize" title="Maximizar"></span>
+      </div>
+
+      <h1 class="title-bar__label">incognito@piratas: ~</h1>
+
+      <!-- Interruptor de sonido de tecleo -->
+      <button class="sound-toggle" id="sound-toggle" type="button"
+              aria-pressed="false" title="Activar/desactivar sonido de tecleo">
+        <span id="sound-icon">🔇</span>
+      </button>
+    </header>
+
+    <!-- ---------- CUERPO DE LA TERMINAL (scrollable) ---------- -->
+    <section class="terminal-body" id="terminal-body" tabindex="0" aria-label="Salida de la terminal">
+
+      <!-- Aquí se inyectan dinámicamente todas las líneas de salida -->
+      <div class="terminal-output" id="terminal-output"></div>
+
+      <!-- Línea activa: prompt + texto que el usuario está escribiendo + cursor -->
+      <div class="terminal-line terminal-line--active" id="active-line">
+        <span class="prompt" id="prompt-label"></span>
+        <span class="current-input" id="current-input-display"></span>
+        <span class="cursor" id="cursor"></span>
+      </div>
+    </section>
+
+    <!-- Input real (oculto) que capabilidad captura el teclado físico/virtual.
+         Se mantiene siempre enfocado para que funcione también en móviles. -->
+    <input
+      type="text"
+      id="hidden-input"
+      class="hidden-input"
+      autocomplete="off"
+      autocapitalize="off"
+      autocorrect="off"
+      spellcheck="false"
+      aria-label="Escribe un comando"
+    >
+  </main>
+
+  <!-- Lógica de la terminal -->
+  <script src="script.js"></script>
+</body>
+</html>

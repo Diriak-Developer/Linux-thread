@@ -1,0 +1,449 @@
+/* ==================================================================
+   TERMINAL LINUX SIMULATOR — HOJA DE ESTILOS
+   Organización:
+     1. Variables globales (paleta / tipografía / medidas)
+     2. Reset y base
+     3. Fondo ambiental
+     4. Ventana de terminal (contenedor principal)
+     5. Barra superior (title bar) y botones de ventana
+     6. Cuerpo de la terminal y líneas de salida
+     7. Prompt, input activo y cursor parpadeante
+     8. Tabla del comando "ls"
+     9. Scrollbar personalizada
+     10. Selección de texto estilo terminal
+     11. Animaciones (arranque, fade-in, cursor)
+     12. Responsive (tablet / móvil)
+   ================================================================== */
+
+
+/* ------------------------------------------------------------------
+   1. VARIABLES GLOBALES
+   Paleta inspirada en terminales hacker clásicas (tonos oscuros +
+   verde de prompt + cian de ruta + acentos ámbar para links/comandos).
+------------------------------------------------------------------- */
+:root {
+  /* Colores base de la ventana */
+  --bg-page:            #05070a;                 /* fondo detrás de la ventana */
+  --bg-terminal:        rgba(13, 16, 22, 0.97);  /* fondo del cuerpo de la terminal */
+  --bg-titlebar:        #1b1f27;                 /* fondo de la barra superior */
+  --border-window:      rgba(255, 255, 255, 0.08);
+
+  /* Texto */
+  --text-primary:       #e7e9ee;   /* texto de salida general */
+  --text-muted:         #6c7383;   /* comentarios / descripciones / metadatos */
+  --text-dim:           #4a5062;   /* texto muy secundario (boot log) */
+
+  /* Acentos semánticos */
+  --accent-user:        #4fe37b;   /* usuario en el prompt */
+  --accent-host:        #58c4ff;   /* host / ruta en el prompt */
+  --accent-command:     #ffc46b;   /* nombres de comandos / links */
+  --accent-error:       #ff5c5c;   /* mensajes de error */
+  --accent-success:     #4fe37b;   /* mensajes de éxito ([OK]) */
+  --accent-magenta:     #d783ff;   /* acentos decorativos (banner) */
+
+  /* Botones tipo semáforo de la ventana */
+  --btn-close:          #ff5f57;
+  --btn-minimize:       #febc2e;
+  --btn-maximize:       #28c840;
+
+  /* Tipografía monoespaciada (solo fuentes de sistema, sin dependencias externas) */
+  --font-mono: "Cascadia Code", "Fira Code", "JetBrains Mono", "Ubuntu Mono",
+               "SFMono-Regular", Consolas, Menlo, monospace;
+
+  /* Medidas */
+  --radius-window: 10px;
+  --line-height:   1.55;
+  --font-size:     15px;
+}
+
+
+/* ------------------------------------------------------------------
+   2. RESET Y BASE
+------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg-page);
+  font-family: var(--font-mono);
+  font-size: var(--font-size);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  overflow: hidden;
+  /* Ligera textura radial para que el fondo no se sienta plano */
+  background-image:
+    radial-gradient(circle at 50% 0%, #0d1017 0%, #05070a 60%);
+}
+
+
+/* ------------------------------------------------------------------
+   3. FONDO AMBIENTAL
+   Capa fija con scanlines muy sutiles, como un monitor CRT apagado,
+   para reforzar la sensación retro sin afectar la legibilidad.
+------------------------------------------------------------------- */
+.ambient-backdrop {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.012) 0px,
+    rgba(255, 255, 255, 0.012) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity: 0.6;
+}
+
+
+/* ------------------------------------------------------------------
+   4. VENTANA DE TERMINAL (contenedor principal)
+------------------------------------------------------------------- */
+.terminal-window {
+  position: relative;
+  z-index: 1;
+  width: min(920px, 94vw);
+  height: min(640px, 88vh);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-terminal);
+  border-radius: var(--radius-window);
+  border: 1px solid var(--border-window);
+  overflow: hidden;
+
+  /* Sombra profunda + resplandor sutil para dar sensación de "vidrio" flotante */
+  box-shadow:
+    0 30px 60px -15px rgba(0, 0, 0, 0.65),
+    0 10px 25px -10px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+
+  /* Animación de entrada: la ventana "enciende" al cargar la página */
+  animation: crt-power-on 0.6s ease-out;
+}
+
+
+/* ------------------------------------------------------------------
+   5. BARRA SUPERIOR (title bar) Y BOTONES DE VENTANA
+------------------------------------------------------------------- */
+.title-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 42px;
+  padding: 0 14px;
+  background: linear-gradient(to bottom, #22262f, #1b1f27);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.title-bar__buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+  transition: filter 0.15s ease;
+}
+
+.btn--close    { background: var(--btn-close); }
+.btn--minimize { background: var(--btn-minimize); }
+.btn--maximize { background: var(--btn-maximize); }
+
+.title-bar__buttons:hover .btn {
+  filter: brightness(1.15);
+}
+
+.title-bar__label {
+  flex: 1;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.2px;
+}
+
+/* Botón para alternar el sonido de tecleo */
+.sound-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  padding: 4px;
+}
+
+.sound-toggle:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+
+/* ------------------------------------------------------------------
+   6. CUERPO DE LA TERMINAL Y LÍNEAS DE SALIDA
+------------------------------------------------------------------- */
+.terminal-body {
+  flex: 1;
+  padding: 16px 18px 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  line-height: var(--line-height);
+  outline: none; /* el foco real recae en el input oculto */
+  cursor: text;
+}
+
+.terminal-output {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Cada línea impresa en la terminal */
+.terminal-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 1.4em;
+}
+
+/* Variantes semánticas de línea */
+.line-error    { color: var(--accent-error); }
+.line-success  { color: var(--accent-success); }
+.line-muted    { color: var(--text-muted); }
+.line-dim      { color: var(--text-dim); font-size: 13px; }
+.line-command  { color: var(--accent-command); }
+.line-banner   { color: var(--accent-magenta); }
+.line-heading  { color: var(--accent-host); font-weight: 600; }
+
+/* Texto que aparece con animación de fundido gradual */
+.fade-in {
+  animation: text-fade-in 0.25s ease-out both;
+}
+
+
+/* ------------------------------------------------------------------
+   7. PROMPT, INPUT ACTIVO Y CURSOR PARPADEANTE
+------------------------------------------------------------------- */
+.terminal-line--active {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.prompt {
+  white-space: pre;
+  font-weight: 600;
+}
+
+/* Colores dentro del prompt: "usuario" en verde, "@piratas:~$" en cian */
+.prompt .prompt-user { color: var(--accent-user); }
+.prompt .prompt-host { color: var(--accent-host); }
+.prompt .prompt-symbol { color: var(--text-primary); }
+
+.current-input {
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--text-primary);
+  margin-left: 2px;
+}
+
+/* Cursor de bloque parpadeante, idéntico al de una terminal real */
+.cursor {
+  display: inline-block;
+  width: 8px;
+  height: 17px;
+  background: var(--text-primary);
+  margin-left: 2px;
+  animation: blink-cursor 1s steps(1) infinite;
+  transform: translateY(2px);
+}
+
+.cursor.cursor--hidden {
+  animation: none;
+  opacity: 0;
+}
+
+/* Input real, invisible pero funcional (captura teclado físico y móvil) */
+.hidden-input {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+  opacity: 0;
+  height: 0;
+  width: 0;
+  border: none;
+  outline: none;
+}
+
+
+/* ------------------------------------------------------------------
+   8. TABLA DEL COMANDO "ls"
+------------------------------------------------------------------- */
+.ls-table {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+  margin: 4px 0 6px;
+}
+
+.ls-row {
+  display: table-row;
+}
+
+.ls-row.ls-row--header .ls-cell {
+  color: var(--accent-host);
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.ls-cell {
+  display: table-cell;
+  padding: 3px 18px 3px 0;
+  vertical-align: top;
+  white-space: pre-wrap;
+}
+
+.ls-cell--name        { color: var(--accent-command); font-weight: 600; }
+.ls-cell--desc         { color: var(--text-primary); }
+.ls-cell--cmd          { color: var(--text-muted); font-style: italic; }
+
+
+/* ------------------------------------------------------------------
+   9. SCROLLBAR PERSONALIZADA (estética terminal minimalista)
+------------------------------------------------------------------- */
+.terminal-body::-webkit-scrollbar {
+  width: 10px;
+}
+
+.terminal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.terminal-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+}
+
+.terminal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Firefox */
+.terminal-body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+
+/* ------------------------------------------------------------------
+   10. SELECCIÓN DE TEXTO ESTILO TERMINAL
+   Simula la selección azul/verde translúcida típica de emuladores
+   de terminal en Linux (GNOME Terminal / Kitty / Alacritty).
+------------------------------------------------------------------- */
+.terminal-body ::selection {
+  background: rgba(79, 227, 123, 0.35);
+  color: #ffffff;
+}
+
+.terminal-body ::-moz-selection {
+  background: rgba(79, 227, 123, 0.35);
+  color: #ffffff;
+}
+
+
+/* ------------------------------------------------------------------
+   11. ANIMACIONES
+------------------------------------------------------------------- */
+
+/* Encendido tipo CRT: la ventana aparece con un ligero "flash" y escala */
+@keyframes crt-power-on {
+  0%   { opacity: 0; transform: scale(0.98); filter: brightness(2.2); }
+  40%  { opacity: 1; filter: brightness(1.4); }
+  100% { opacity: 1; transform: scale(1);    filter: brightness(1); }
+}
+
+/* Fundido gradual para líneas de texto que van apareciendo */
+@keyframes text-fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Parpadeo del cursor de bloque */
+@keyframes blink-cursor {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+
+/* ------------------------------------------------------------------
+   12. RESPONSIVE (tablet / móvil)
+------------------------------------------------------------------- */
+@media (max-width: 720px) {
+  .terminal-window {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    border-radius: 0;
+  }
+
+  :root {
+    --font-size: 13.5px;
+  }
+
+  .terminal-body {
+    padding: 12px 12px 8px;
+  }
+
+  .title-bar__label {
+    font-size: 11px;
+  }
+
+  .ls-cell {
+    padding: 3px 10px 3px 0;
+  }
+}
+
+@media (max-width: 420px) {
+  /* En pantallas muy pequeñas, la tabla de "ls" se apila para que las
+     descripciones largas no rompan el layout horizontal */
+  .ls-table,
+  .ls-row,
+  .ls-cell {
+    display: block;
+    width: 100%;
+  }
+
+  .ls-row {
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+  }
+
+  .ls-row.ls-row--header {
+    display: none; /* el encabezado no aporta en formato apilado */
+  }
+
+  .ls-cell--desc,
+  .ls-cell--cmd {
+    padding-left: 12px;
+    font-size: 12.5px;
+  }
+}
